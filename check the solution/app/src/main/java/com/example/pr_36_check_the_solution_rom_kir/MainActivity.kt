@@ -8,7 +8,12 @@ import androidx.appcompat.app.AppCompatActivity
 import kotlin.random.Random
 import kotlin.math.roundToInt
 
+
+
 class MainActivity : AppCompatActivity() {
+
+    var answer: Int = 0
+    var answer_2 = 0
 
     private lateinit var exampleTextView: TextView
     private lateinit var answerTextView: TextView
@@ -17,11 +22,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var incorrectButton: Button
     private lateinit var totalExamplesTextView: TextView
     private lateinit var correctAnswersTextView: TextView
+    private lateinit var incorrectAnswersTextView: TextView
     private lateinit var timeTextView: TextView
+    private val answerTimes = mutableListOf<Long>()
+
+    private var startTime: Long = 0
 
     private var correctAnswers = 0
+    private var incorrectAnswers = 0
     private var totalAnswers = 0
-    private var totalTime = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +43,7 @@ class MainActivity : AppCompatActivity() {
         incorrectButton = findViewById(R.id.incorrectButton)
         totalExamplesTextView = findViewById(R.id.totalExamplesTextView)
         correctAnswersTextView = findViewById(R.id.correctAnswersTextView)
+        incorrectAnswersTextView = findViewById(R.id.incorrectAnswersTextView)
         timeTextView = findViewById(R.id.timeTextView)
 
         startButton.setOnClickListener { generateExample() }
@@ -41,8 +51,8 @@ class MainActivity : AppCompatActivity() {
         incorrectButton.setOnClickListener { checkAnswer(false) }
     }
     fun Double.isWhole() = this == Math.floor(this) && !java.lang.Double.isInfinite(this)
-
     private fun generateExample() {
+        // Код генерации примера
         val number1 = Random.nextInt(10, 99)
         val number2 = Random.nextInt(10, 99)
         val operator = when (Random.nextInt(0, 4)) {
@@ -52,8 +62,10 @@ class MainActivity : AppCompatActivity() {
             else -> "+"
 
         }
+
         totalAnswers++
         val example = "$number1 $operator $number2"
+
         var answer = when (operator) {
             "*" -> number1 * number2
             "/" -> {
@@ -73,54 +85,87 @@ class MainActivity : AppCompatActivity() {
             else -> 0
         }
 
+
+
         if (answer is Double)
         {
             if (answer >= 60)
             {
-                answer = Random.nextDouble(10.0, 100.0) // Генерируем случайное число в диапазоне от 10 до 99
-            }
+                answer_2 = Random.nextDouble(10.0, 100.0).toInt() // Генерируем случайное число в диапазоне от 10 до 99
+            }else{answer_2=answer.toInt()}
         } else if (answer is Int)
         {
             if (answer >= 60)
             {
-                answer = Random.nextInt(10, 100) // Генерируем случайное число в диапазоне от 10 до 99
-            }
+                answer_2 = Random.nextInt(10, 100) // Генерируем случайное число в диапазоне от 10 до 99
+            }else{answer_2=answer.toInt()}
         }
 
 
-
+        startTime = SystemClock.elapsedRealtime()
         exampleTextView.text = example
-        answerTextView.text = answer.toString()
+        answerTextView.text = answer_2.toString()
         updateCounters()
         correctButton.isEnabled = true
         incorrectButton.isEnabled = true
+        startButton.isEnabled = false
+
     }
 
     private fun checkAnswer(isCorrect: Boolean) {
         correctButton.isEnabled = false
         incorrectButton.isEnabled = false
-
-        val startTime = SystemClock.elapsedRealtime()
+        startButton.isEnabled = true
         val elapsedTime = SystemClock.elapsedRealtime() - startTime
-        totalTime += elapsedTime
+        answerTimes.add(elapsedTime)
+        startTime = 0
 
-        if (isCorrect) {
-            correctAnswers++
+        // Преобразование answer в Int для сравнения
+        var answerInt = answer.toInt()
+        // Преобразование answer_2 в Int для сравнения
+        var answer_2_Int = answer_2.toInt()
+
+        if (isCorrect)
+        {
+            if  (answerInt==answer_2_Int)
+            {
+                correctAnswers++
+            }else{incorrectAnswers++}
+        } else
+        {
+            if  (!(answerInt==answer_2_Int))
+            {
+                correctAnswers++
+            }
+            else{incorrectAnswers++}
         }
-        totalAnswers++
+        //totalAnswers++
 
-        // Здесь можно обновить UI с новыми статистическими данными
         updateCounters()
+        calculateAndDisplayTimeStats()
     }
 
     private fun updateCounters() {
         totalExamplesTextView.text = "Решено примеров: $totalAnswers"
-        correctAnswersTextView.text = "Правильно решено: $correctAnswers"
-        // Обновление времени
-        val elapsedTime = SystemClock.elapsedRealtime() - totalTime
-        timeTextView.text = "Затраченное время: ${elapsedTime / 1000} секунд"
+
+        // Вычисление процента верных ответов
+        val percentage = if (totalAnswers > 0) 100.0 * correctAnswers / totalAnswers else 0.0
+        // Обновление UI с процентом верных ответов
+        correctAnswersTextView.text = "Правильно решено: $correctAnswers (${percentage.round(2)}%)"
+        incorrectAnswersTextView.text = "Неправильно решено: $incorrectAnswers"
     }
-    private fun Double.round(decimals: Int): Double {
+
+    private fun calculateAndDisplayTimeStats() {
+        val minTime = answerTimes.minOrNull() ?: 0
+        val maxTime = answerTimes.maxOrNull() ?: 0
+        val avgTime = answerTimes.average().toLong()
+
+        // Обновление UI с новыми статистическими данными
+        timeTextView.text = "Минимальное время: $minTime мс, Максимальное время: $maxTime мс, Среднее время: $avgTime мс"
+    }
+
+    // Расширение для округления чисел с плавающей точкой
+    fun Double.round(decimals: Int): Double {
         var multiplier = 1.0
         repeat(decimals) { multiplier *= 10 }
         return kotlin.math.round(this * multiplier) / multiplier
